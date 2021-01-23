@@ -7,11 +7,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-add_executable(ga
-	"include/ga/core/ga.h"
-	"src/core/ga.cpp" 
-)
+set(GA_HEADERS "include/ga/core/ga.h")
+set(GA_SOURCES "src/core/ga.cpp")
+add_library(ga ${GA_HEADERS} ${GA_SOURCES})
 
-add_executable(test_ga
-	"test/test_ga.cpp"
-)
+add_executable(test_ga "test/test_ga.cpp")
+target_link_libraries(test_ga PUBLIC ga)

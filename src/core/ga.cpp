@@ -1,164 +1,215 @@
 #include <ga/core/ga.h>
+#include <assert.h>
 
 namespace ga {
 
-individual::individual(std::string chrm) : _chromosome{std::move(chrm)} {}
+size_t model::get_chromosome_length() const {
+	return _pm._genes.size();
+}
 
-const std::string& individual::get_chromosome() const {
-	return _chromosome;
+void model::set_population_size(uint16_t ppl_s) {
+	_am._population_size = ppl_s;
+}
+
+uint16_t model::get_population_size() const {
+	return _am._population_size;
+}
+
+void model::set_mutation_rate(double mutation_rate) {
+	_am._mutation_rate = mutation_rate;
+}
+
+double model::get_mutation_rate() const {
+	return _am._mutation_rate;
+}
+
+void model::register_fitness_cb(fitness_cb_t cb) {
+	_am._fitness_cb = std::move(cb);
+}
+
+const model::fitness_cb_t& model::get_fitness_cb() const {
+	return _am._fitness_cb;
+}
+
+void model::register_initialization_cb(initialization_cb_t cb) {
+	_am._initialization_cb = std::move(cb);
+}
+
+const model::initialization_cb_t& model::get_initialization_cb() const {
+	return _am._initialization_cb;
+}
+
+void model::register_selection_cb(selection_cb_t cb) {
+	_am._selection_cb = std::move(cb);
+}
+
+const model::selection_cb_t& model::get_selection_cb() const {
+	return _am._selection_cb;
+}
+
+void model::register_crossover_cb(crossover_cb_t cb) {
+	_am._crossover_cb = std::move(cb);
+}
+
+const model::crossover_cb_t& model::get_crossover_cb() const {
+	return _am._crossover_cb;
+}
+
+void model::register_mutation_cb(mutation_cb_t cb) {
+	_am._mutation_cb = std::move(cb);
+}
+
+const model::mutation_cb_t& model::get_mutation_cb() const {
+	return _am._mutation_cb;
+}
+
+individual::individual(model& md) : _model{md} {}
+
+individual& individual::operator=(const individual& ind) {
+	this->_model = ind._model;
+  	this->_chromosome = ind._chromosome;
+	this->_fitness = ind._fitness;
+	return *this;
+}
+
+individual& individual::operator=(individual&& ind) {
+	this->_model = ind._model;
+  	this->_chromosome = std::move(ind._chromosome);
+	this->_fitness = ind._fitness;
+	return *this;
 }
 
 void individual::compute_fitness() {
-	int trgt_ln = TARGET.length();
-	if (_chromosome.length() != trgt_ln) {
-		return;
-	}
-	_fitness = trgt_ln;
-	for (int i = 0; i < trgt_ln; i++) {
-		if (_chromosome[i] == TARGET[i]) {
-			_fitness--;
-		}
-	}
+	_fitness = _model.get_fitness_cb()(*this);
 }
 
-int individual::get_fitness() const {
+double individual::get_fitness() const {
 	return _fitness;
 }
 
-std::ostream& operator<<(std::ostream& os, const individual& indv) {
-	os << "Individual " << indv._chromosome << ": " << indv._fitness;
+std::ostream& operator<<(std::ostream& os, const individual& ind) {
+	os << "Individual (";
+	const auto& chr = ind._chromosome;
+	size_t chr_l = chr.size();
+	for (size_t i = 0; i < chr_l; i++) {
+		auto gene = std::dynamic_pointer_cast<gene_value<int>>(chr[i]); // FIXME
+		os << *gene << ((i == chr_l - 1) ? "" : ", ");
+	}
+	os << "): " << ind._fitness;
 	return os;
 }
 
-population::population(int gnrt) : _generation{gnrt} {}
+population::population(model& md, uint32_t gen) : _model{md}, _generation{gen} {}
 
-population::population(int gnrt, std::vector<individual> indvs) : _generation{gnrt}, _indvs{std::move(indvs)} {}
+population& population::operator=(const population& ppl) {
+	this->_model = ppl._model;
+	this->_generation = ppl._generation;
+	this->_individuals = ppl._individuals;
+	this->_fitness = ppl._fitness;
+	return *this;
+}
 
-int population::get_generation() {
+population& population::operator=(population&& ppl) {
+	this->_model = ppl._model;
+	this->_generation = ppl._generation;
+	this->_individuals = std::move(ppl._individuals);
+	this->_fitness = ppl._fitness;
+	return *this;
+}
+
+void population::increase_generation() {
+	_generation++;
+}
+
+uint32_t population::get_generation() {
 	return _generation;
 }
 
-const std::vector<individual>& population::get_individuals() const {
-	return _indvs;
+void population::add_individual(const individual& ind) {
+	_individuals.push_back(ind);
 }
 
-void population::add_individual(const individual& indv) {
-	_indvs.push_back(indv);
+individual& population::get_individual(size_t id) {
+	assert(id >= 0 && id < _individuals.size());
+	return _individuals[id];
 }
 
-const individual& population::get_individual(int id) const {
-	return _indvs[id];
+void population::remove_individuals_backward(size_t n) {
+	_individuals.erase(_individuals.begin() + _individuals.size() - n, _individuals.end());
 }
 
 void population::compute_fitness() {
-	for (auto& indv : _indvs) {
-		indv.compute_fitness();
+	for (auto& ind : _individuals) {
+		ind.compute_fitness();
 	}
-	std::sort(_indvs.begin(), _indvs.end(), [](const individual& lhs, const individual& rhs) {
+	std::sort(_individuals.begin(), _individuals.end(), [](const individual& lhs, const individual& rhs) {
 		return lhs.get_fitness() < rhs.get_fitness();
 	});
-	_fitness = _indvs.front().get_fitness();;
+	_fitness = _individuals.front().get_fitness();
 }
 
-int population::get_fitness() const {
+double population::get_fitness() const {
 	return _fitness;
 }
 
-std::ostream& operator<<(std::ostream& os, const population& pplt) {
-	os << "Generation: " << pplt._generation << "\n";
-	os << "Fitness: " << pplt._fitness << "\n";
-	for (const auto& indv : pplt._indvs) {
-		os << indv << "\n";
+size_t population::size() const {
+	return _individuals.size();
+}
+
+std::ostream& operator<<(std::ostream& os, const population& ppl) {
+	os << "Generation: " << ppl._generation << "\n";
+	os << "Fitness: " << ppl._fitness << "\n";
+	for (const auto& ind : ppl._individuals) {
+		os << ind << "\n";
 	}
 	return os;
 }
 
-population algorithm::create_random_population() {
-	population pplt{0};
-	int n_genes = GENES.length();
-	int trgt_ln = TARGET.length();
-	for (int i = 0; i < POPULATION_SIZE; i++) {
-		std::string chrm;
-		for (int j = 0; j < trgt_ln; j++) {
-			chrm += GENES[get_random(0, n_genes - 1)];
-		}
-		pplt.add_individual(chrm);
-	}
-	return std::move(pplt);
+model& algorithm::get_model() {
+	return _model;
 }
 
-void algorithm::compute_fitness(population& pplt) {
-	pplt.compute_fitness();
+void algorithm::init(population& ppl) {
+	_model.get_initialization_cb()(ppl);
 }
 
-std::vector<individual> algorithm::do_selection(population& pplt) {
-	int n_selected = POPULATION_SIZE >> 1;
-	auto& indvs = pplt.get_individuals();
-	std::vector<individual> selected(indvs.begin(), indvs.begin() + n_selected);
-	return std::move(selected);
+void algorithm::select(population& ppl) {
+	_model.get_selection_cb()(ppl);
 }
 
-void algorithm::do_crossover(population& pplt) {
-	int trgt_ln = TARGET.length();
-	int pivot = trgt_ln >> 1;
-	int n_pairs = pplt.get_individuals().size() >> 1;
-	for (int i = 0; i < n_pairs; i++) {
-		// std::cout << "c" << i << std::endl;
-		std::string prnt1 = pplt.get_individual(i << 1).get_chromosome();
-		std::string prnt2 = pplt.get_individual((i << 1) + 1).get_chromosome();
-		std::string chld1 = prnt1.substr(0, pivot) + prnt2.substr(pivot, trgt_ln - pivot);
-		std::string chld2 = prnt2.substr(0, pivot) + prnt2.substr(pivot, trgt_ln - pivot);
-		pplt.add_individual(std::move(chld1));
-		pplt.add_individual(std::move(chld2));
-	}
+void algorithm::crossover(population& ppl) {
+	_model.get_crossover_cb()(ppl);
 }
 
-void algorithm::do_mutation(population& pplt) {
-	int n_mutated_indvs = POPULATION_SIZE * 20 / 100;
-	int n_mutated_genes = 1;
-	int n_genes = GENES.length();
-	int pplt_sz = pplt.get_individuals().size();
-	int trgt_ln = TARGET.length();
-	for (int i = 0; i < n_mutated_indvs; i++) {
-		// std::cout << "m" << i << std::endl;
-		int r = get_random(pplt_sz >> 1, pplt_sz - 1);
-		std::string rand_chrm = pplt.get_individual(r).get_chromosome();
-		for (int j = 0; j < n_mutated_genes; j++) {
-			char rand_gene = GENES[get_random(0, n_genes - 1)];
-			int r = get_random(0, trgt_ln - 1);
-			rand_chrm[r] = rand_gene;
-		}
-		pplt.add_individual(std::move(rand_chrm));
-	}
+void algorithm::mutate(population& ppl) {
+	_model.get_mutation_cb()(ppl);
 }
 
 void algorithm::evolve() {
-	population pplt{std::move(create_random_population())};
-	compute_fitness(pplt);
-	print(pplt);
-	while (!is_converged(pplt)) {
-		auto indvs = std::move(do_selection(pplt));
-		population new_pplt{ pplt.get_generation() + 1, std::move(indvs) };
-		do_crossover(new_pplt);
-		do_mutation(new_pplt);
-		compute_fitness(new_pplt);
-		print(pplt);
-		pplt = std::move(new_pplt);
+	population ppl{_model, 0};
+	init(ppl);
+	compute_fitness(ppl);
+	print(ppl);
+	while (!is_converged(ppl)) {
+		select(ppl);
+		ppl.increase_generation();
+		crossover(ppl);
+		mutate(ppl);
+		compute_fitness(ppl);
+		print(ppl);
 	}
-	std::cout << "SOLUTION\n" << pplt.get_individual(0).get_chromosome() << std::endl;
 }
 
-bool algorithm::is_converged(population& pplt) {
-	return pplt.get_fitness() == 0 || pplt.get_generation() == 1000;
+void algorithm::compute_fitness(population& ppl) {
+	ppl.compute_fitness();
 }
 
-void algorithm::print(population& pplt) {
-	std::cout << pplt << std::endl;
+bool algorithm::is_converged(population& ppl) {
+	return ppl.get_fitness() == 0 || ppl.get_generation() == 1000;
 }
 
+void algorithm::print(population& ppl) {
+	std::cout << ppl << "\n";
 }
 
-int main(int argc, char** argv) {
-	ga::algorithm algr;
-	algr.evolve();
 }
