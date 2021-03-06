@@ -1,5 +1,4 @@
 #include <ga/core/ga.h>
-#include <assert.h>
 
 namespace ga {
 
@@ -66,16 +65,16 @@ const model::mutation_cb_t& model::get_mutation_cb() const {
 individual::individual(model& md) : _model{md} {}
 
 individual& individual::operator=(const individual& ind) {
-	this->_model = ind._model;
-  	this->_chromosome = ind._chromosome;
-	this->_fitness = ind._fitness;
+	_model = ind._model;
+  	_chromosome = ind._chromosome;
+	compute_fitness();
 	return *this;
 }
 
 individual& individual::operator=(individual&& ind) {
-	this->_model = ind._model;
-  	this->_chromosome = std::move(ind._chromosome);
-	this->_fitness = ind._fitness;
+	_model = ind._model;
+  	_chromosome = std::move(ind._chromosome);
+	compute_fitness();
 	return *this;
 }
 
@@ -92,7 +91,7 @@ std::ostream& operator<<(std::ostream& os, const individual& ind) {
 	const auto& chr = ind._chromosome;
 	size_t chr_l = chr.size();
 	for (size_t i = 0; i < chr_l; i++) {
-		auto gene = std::dynamic_pointer_cast<gene_value<int>>(chr[i]); // FIXME
+		auto gene = std::dynamic_pointer_cast<gene_impl<int>>(chr[i]); // FIXME
 		os << *gene << ((i == chr_l - 1) ? "" : ", ");
 	}
 	os << "): " << ind._fitness;

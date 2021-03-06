@@ -9,25 +9,20 @@
 
 namespace ga {
 
-struct gene {
-	gene() = default;
-	gene(const gene&) = default;
-	gene(gene&&) = default;
-	gene& operator=(const gene&) = default;
-	gene& operator=(gene&&) = default;
-	virtual ~gene() = default;
+struct alleles {
+    virtual ~alleles() = default;
 };
 
 template <typename gene_t>
-struct alleles : public gene {
+struct alleles_impl : public alleles {
 public:
-	alleles() = default;
-    explicit alleles(const std::vector<gene_t>& values) : _alleles{std::move(values)} {}
-	alleles(const alleles&) = default;
-	alleles(alleles&&) = default;
-	alleles& operator=(const alleles&) = default;
-	alleles& operator=(alleles&&) = default;
-	~alleles() override = default;
+	alleles_impl() = default;
+    explicit alleles_impl(const std::vector<gene_t>& values) : _alleles{std::move(values)} {}
+	alleles_impl(const alleles_impl&) = default;
+	alleles_impl(alleles_impl&&) = default;
+	alleles_impl& operator=(const alleles_impl&) = default;
+	alleles_impl& operator=(alleles_impl&&) = default;
+	~alleles_impl() override = default;
 	const std::vector<gene_t>& get_alleles() const {
 		return _alleles;
 	}
@@ -35,16 +30,20 @@ private:
 	std::vector<gene_t> _alleles;
 };
 
+struct gene {
+    virtual ~gene() = default;
+};
+
 template <typename gene_t>
-struct gene_value : public gene {
+struct gene_impl : public gene {
 public:
-	gene_value() = default;
-    explicit gene_value(gene_t value) : _value{value} {}
-	gene_value(const gene_value&) = default;
-	gene_value(gene_value&&) = default;
-	gene_value& operator=(const gene_value&) = default;
-	gene_value& operator=(gene_value&&) = default;
-	~gene_value() override = default;
+	gene_impl() = default;
+    explicit gene_impl(gene_t value) : _value{value} {}
+	gene_impl(const gene_impl&) = default;
+	gene_impl(gene_impl&&) = default;
+	gene_impl& operator=(const gene_impl&) = default;
+	gene_impl& operator=(gene_impl&&) = default;
+	~gene_impl() override = default;
 	void set_value(gene_t value) {
 		_value = value;
 	}
@@ -56,8 +55,8 @@ private:
 };
 
 template <typename gene_t>
-inline std::ostream& operator<<(std::ostream& os, gene_value<gene_t> gene) {
-	os << gene.get_value();
+inline std::ostream& operator<<(std::ostream& os, gene_impl<gene_t> g) {
+	os << g.get_value();
 	return os;
 }
 
@@ -75,11 +74,11 @@ public:
     ~problem_model() = default;
     friend struct model;
 private:
-	std::vector<std::shared_ptr<gene>> _genes;
+	std::vector<std::shared_ptr<alleles>> _genes;
 };
 
 struct algorithm_model {
-	using fitness_cb_t = std::function<bool(individual&)>;
+	using fitness_cb_t = std::function<double(individual&)>;
 	using initialization_cb_t = std::function<void(population&)>;
 	using selection_cb_t = std::function<void(population&)>;
 	using crossover_cb_t = std::function<void(population&)>;
@@ -118,13 +117,13 @@ public:
 	size_t get_chromosome_length() const;
 	template <typename gene_t>
 	void add_gene(const std::vector<gene_t>& values) {
-		auto gene = std::make_shared<alleles<gene_t>>(std::move(values));
+		auto gene = std::make_shared<alleles_impl<gene_t>>(std::move(values));
 		_pm._genes.push_back(std::move(gene));
     }
 	template <typename gene_t>
   	const std::vector<gene_t>& get_alleles(size_t id) const {
       	assert(id >= 0 && id < _pm._genes.size());
-		auto gene = std::dynamic_pointer_cast<alleles<gene_t>>(_pm._genes[id]);
+		auto gene = std::dynamic_pointer_cast<alleles_impl<gene_t>>(_pm._genes[id]);
       	assert(gene);
 		return gene->get_alleles();
     }
@@ -162,13 +161,13 @@ public:
 		const auto& alleles = _model.get_alleles<gene_t>(gene_id);
 		auto it = std::find(alleles.begin(), alleles.end(), value);
 		assert(it != alleles.end());
-		auto gene = std::make_shared<gene_value<gene_t>>(value);
+		auto gene = std::make_shared<gene_impl<gene_t>>(value);
 		_chromosome.push_back(gene);
 	}
 	template <typename gene_t>
 	void set_gene(size_t id, gene_t value) {
 		assert(id >= 0 && id < _chromosome.size());
-		auto gene = std::dynamic_pointer_cast<gene_value<gene_t>>(_chromosome[id]);
+		auto gene = std::dynamic_pointer_cast<gene_impl<gene_t>>(_chromosome[id]);
 		const auto& alleles = _model.get_alleles<gene_t>(id);
 		auto it = std::find(alleles.begin(), alleles.end(), value);
 		assert(it != alleles.end());
@@ -177,7 +176,7 @@ public:
 	template <typename gene_t>
 	gene_t get_gene(size_t id) {
 		assert(id >= 0 && id < _chromosome.size());
-		auto gene = std::dynamic_pointer_cast<gene_value<gene_t>>(_chromosome[id]);
+		auto gene = std::dynamic_pointer_cast<gene_impl<gene_t>>(_chromosome[id]);
 		assert(gene);
       	return gene->get_value();
 	}
@@ -187,7 +186,7 @@ public:
 private:
 	model& _model;
 	std::vector<std::shared_ptr<gene>> _chromosome;
-	double _fitness = DBL_MAX;
+	double _fitness = -1;
 };
 
 struct population {
@@ -211,7 +210,7 @@ private:
 	model& _model;
 	uint32_t _generation;
 	std::vector<individual> _individuals;
-	double _fitness = DBL_MAX;
+	double _fitness = -1;
 };
 
 struct algorithm {

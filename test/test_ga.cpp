@@ -13,8 +13,8 @@ int main(int argc, char** argv) {
 	model.add_gene<int>({0, 1, 2});
 	model.add_gene<int>({0, 1, 2});
 	model.add_gene<int>({0, 1, 2});
-	model.register_fitness_cb([&model](ga::individual& ind) {
-		return ind.get_gene<int>(0) + ind.get_gene<int>(1) + ind.get_gene<int>(2) - 6;
+	model.register_fitness_cb([](ga::individual& ind) {
+		return 6 - (ind.get_gene<int>(0) + ind.get_gene<int>(1) + ind.get_gene<int>(2));
 	});
 	model.set_population_size(16);
 	model.set_mutation_rate(12);
