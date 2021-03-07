@@ -2,67 +2,7 @@
 
 namespace ga {
 
-size_t model::get_chromosome_length() const {
-	return _pm._genes.size();
-}
-
-void model::set_population_size(uint16_t ppl_s) {
-	_am._population_size = ppl_s;
-}
-
-uint16_t model::get_population_size() const {
-	return _am._population_size;
-}
-
-void model::set_mutation_rate(double mutation_rate) {
-	_am._mutation_rate = mutation_rate;
-}
-
-double model::get_mutation_rate() const {
-	return _am._mutation_rate;
-}
-
-void model::register_fitness_cb(fitness_cb_t cb) {
-	_am._fitness_cb = std::move(cb);
-}
-
-const model::fitness_cb_t& model::get_fitness_cb() const {
-	return _am._fitness_cb;
-}
-
-void model::register_initialization_cb(initialization_cb_t cb) {
-	_am._initialization_cb = std::move(cb);
-}
-
-const model::initialization_cb_t& model::get_initialization_cb() const {
-	return _am._initialization_cb;
-}
-
-void model::register_selection_cb(selection_cb_t cb) {
-	_am._selection_cb = std::move(cb);
-}
-
-const model::selection_cb_t& model::get_selection_cb() const {
-	return _am._selection_cb;
-}
-
-void model::register_crossover_cb(crossover_cb_t cb) {
-	_am._crossover_cb = std::move(cb);
-}
-
-const model::crossover_cb_t& model::get_crossover_cb() const {
-	return _am._crossover_cb;
-}
-
-void model::register_mutation_cb(mutation_cb_t cb) {
-	_am._mutation_cb = std::move(cb);
-}
-
-const model::mutation_cb_t& model::get_mutation_cb() const {
-	return _am._mutation_cb;
-}
-
-individual::individual(model& md) : _model{md} {}
+individual::individual(model<>& md) : _model{md} {}
 
 individual& individual::operator=(const individual& ind) {
 	_model = ind._model;
@@ -98,7 +38,7 @@ std::ostream& operator<<(std::ostream& os, const individual& ind) {
 	return os;
 }
 
-population::population(model& md, uint32_t gen) : _model{md}, _generation{gen} {}
+population::population(model<>& md, uint32_t gen) : _model{md}, _generation{gen} {}
 
 population& population::operator=(const population& ppl) {
 	this->_model = ppl._model;
@@ -129,7 +69,7 @@ void population::add_individual(const individual& ind) {
 }
 
 individual& population::get_individual(size_t id) {
-	assert(id >= 0 && id < _individuals.size());
+	assert(id < _individuals.size());
 	return _individuals[id];
 }
 
@@ -164,7 +104,7 @@ std::ostream& operator<<(std::ostream& os, const population& ppl) {
 	return os;
 }
 
-model& algorithm::get_model() {
+model<>& algorithm::get_model() {
 	return _model;
 }
 

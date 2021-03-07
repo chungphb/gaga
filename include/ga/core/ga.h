@@ -1,3 +1,5 @@
+#pragma once
+
 #include <iostream>
 #include <algorithm>
 #include <vector>
@@ -7,149 +9,15 @@
 #include <cassert>
 #include <cfloat>
 
+#include <ga/core/model.h>
+#include <ga/core/gene.h>
+
 namespace ga {
-
-struct alleles {
-    virtual ~alleles() = default;
-};
-
-template <typename gene_t>
-struct alleles_impl : public alleles {
-public:
-	alleles_impl() = default;
-    explicit alleles_impl(const std::vector<gene_t>& values) : _alleles{std::move(values)} {}
-	alleles_impl(const alleles_impl&) = default;
-	alleles_impl(alleles_impl&&) = default;
-	alleles_impl& operator=(const alleles_impl&) = default;
-	alleles_impl& operator=(alleles_impl&&) = default;
-	~alleles_impl() override = default;
-	const std::vector<gene_t>& get_alleles() const {
-		return _alleles;
-	}
-private:
-	std::vector<gene_t> _alleles;
-};
-
-struct gene {
-    virtual ~gene() = default;
-};
-
-template <typename gene_t>
-struct gene_impl : public gene {
-public:
-	gene_impl() = default;
-    explicit gene_impl(gene_t value) : _value{value} {}
-	gene_impl(const gene_impl&) = default;
-	gene_impl(gene_impl&&) = default;
-	gene_impl& operator=(const gene_impl&) = default;
-	gene_impl& operator=(gene_impl&&) = default;
-	~gene_impl() override = default;
-	void set_value(gene_t value) {
-		_value = value;
-	}
-	gene_t get_value() const {
-		return _value;
-	}
-private:
-	gene_t _value;
-};
-
-template <typename gene_t>
-inline std::ostream& operator<<(std::ostream& os, gene_impl<gene_t> g) {
-	os << g.get_value();
-	return os;
-}
-
-struct population;
-
-struct individual;
-
-struct problem_model {
-public:
-	problem_model() = default;
-    problem_model(const problem_model&) = default;
-    problem_model(problem_model&&) = default;
-    problem_model& operator=(const problem_model&) = default;
-    problem_model& operator=(problem_model&&) = default;
-    ~problem_model() = default;
-    friend struct model;
-private:
-	std::vector<std::shared_ptr<alleles>> _genes;
-};
-
-struct algorithm_model {
-	using fitness_cb_t = std::function<double(individual&)>;
-	using initialization_cb_t = std::function<void(population&)>;
-	using selection_cb_t = std::function<void(population&)>;
-	using crossover_cb_t = std::function<void(population&)>;
-	using mutation_cb_t = std::function<void(population&)>;
-public:
-	algorithm_model() = default;
-    algorithm_model(const algorithm_model&) = default;
-    algorithm_model(algorithm_model&&) = default;
-    algorithm_model& operator=(const algorithm_model&) = default;
-    algorithm_model& operator=(algorithm_model&&) = default;
-    ~algorithm_model() = default;
-    friend struct model;
-private:
-	uint16_t _population_size = 50;
-	double _mutation_rate = 10;
-	fitness_cb_t _fitness_cb;
-	initialization_cb_t _initialization_cb;
-	selection_cb_t _selection_cb;
-	crossover_cb_t _crossover_cb;
-	mutation_cb_t _mutation_cb;
-};
-
-struct model {
-	using fitness_cb_t = typename algorithm_model::fitness_cb_t;
-	using initialization_cb_t = typename algorithm_model::initialization_cb_t;
-	using selection_cb_t = typename algorithm_model::selection_cb_t;
-	using crossover_cb_t = typename algorithm_model::crossover_cb_t;
-	using mutation_cb_t = typename algorithm_model::mutation_cb_t;
-public:
-	model() = default;
-    model(const model&) = default;
-    model(model&&) = default;
-    model& operator=(const model&) = default;
-    model& operator=(model&&) = default;
-    ~model() = default;
-	size_t get_chromosome_length() const;
-	template <typename gene_t>
-	void add_gene(const std::vector<gene_t>& values) {
-		auto gene = std::make_shared<alleles_impl<gene_t>>(std::move(values));
-		_pm._genes.push_back(std::move(gene));
-    }
-	template <typename gene_t>
-  	const std::vector<gene_t>& get_alleles(size_t id) const {
-      	assert(id >= 0 && id < _pm._genes.size());
-		auto gene = std::dynamic_pointer_cast<alleles_impl<gene_t>>(_pm._genes[id]);
-      	assert(gene);
-		return gene->get_alleles();
-    }
-    void set_population_size(uint16_t);
-	uint16_t get_population_size() const;
-	void set_mutation_rate(double);
-	double get_mutation_rate() const;
-	void register_fitness_cb(fitness_cb_t);
-	const fitness_cb_t& get_fitness_cb() const;
-  	void register_initialization_cb(initialization_cb_t);
-	const initialization_cb_t& get_initialization_cb() const;
-  	void register_selection_cb(selection_cb_t);
-	const selection_cb_t& get_selection_cb() const;
-  	void register_crossover_cb(crossover_cb_t);
-	const crossover_cb_t& get_crossover_cb() const;
-  	void register_mutation_cb(mutation_cb_t);
-	const mutation_cb_t& get_mutation_cb() const;
-private:
-	problem_model _pm;
-	algorithm_model _am;
-};
 
 struct individual {
 public:
 	individual() = delete;
-	explicit individual(model&);
+	explicit individual(model<>&);
 	individual(const individual&) = default;
 	individual(individual&&) = default;
 	individual& operator=(const individual&);
@@ -166,7 +34,7 @@ public:
 	}
 	template <typename gene_t>
 	void set_gene(size_t id, gene_t value) {
-		assert(id >= 0 && id < _chromosome.size());
+		assert(id < _chromosome.size());
 		auto gene = std::dynamic_pointer_cast<gene_impl<gene_t>>(_chromosome[id]);
 		const auto& alleles = _model.get_alleles<gene_t>(id);
 		auto it = std::find(alleles.begin(), alleles.end(), value);
@@ -175,7 +43,7 @@ public:
 	}
 	template <typename gene_t>
 	gene_t get_gene(size_t id) {
-		assert(id >= 0 && id < _chromosome.size());
+		assert(id < _chromosome.size());
 		auto gene = std::dynamic_pointer_cast<gene_impl<gene_t>>(_chromosome[id]);
 		assert(gene);
       	return gene->get_value();
@@ -184,7 +52,7 @@ public:
 	double get_fitness() const;
 	friend std::ostream& operator<<(std::ostream&, const individual&);
 private:
-	model& _model;
+	model<>& _model;
 	std::vector<std::shared_ptr<gene>> _chromosome;
 	double _fitness = -1;
 };
@@ -192,7 +60,7 @@ private:
 struct population {
 public:
 	population() = delete;
-	explicit population(model&, uint32_t);
+	explicit population(model<>&, uint32_t);
 	population(const population&) = default;
 	population(population&&) = default;
 	population& operator=(const population&);
@@ -207,7 +75,7 @@ public:
 	size_t size() const;
 	friend std::ostream& operator<<(std::ostream&, const population&);
 private:
-	model& _model;
+	model<>& _model;
 	uint32_t _generation;
 	std::vector<individual> _individuals;
 	double _fitness = -1;
@@ -215,7 +83,7 @@ private:
 
 struct algorithm {
 public:
-	model& get_model();
+	model<>& get_model();
 	void init(population&);
 	void select(population&);
 	void crossover(population&);
@@ -225,7 +93,7 @@ public:
 	static bool is_converged(population&);
 	static void print(population&);
 private:
-	model _model;
+	model<> _model;
 };
 
 }

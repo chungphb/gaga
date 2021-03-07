@@ -9,7 +9,7 @@ size_t get_random(size_t min, size_t max) {
 
 int main(int argc, char** argv) {
 	ga::algorithm alg;
-	ga::model& model = alg.get_model();
+	ga::model<>& model = alg.get_model();
 	model.add_gene<int>({0, 1, 2});
 	model.add_gene<int>({0, 1, 2});
 	model.add_gene<int>({0, 1, 2});
