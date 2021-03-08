@@ -6,14 +6,14 @@ individual::individual(model<>& md) : _model{md} {}
 
 individual& individual::operator=(const individual& ind) {
 	_model = ind._model;
-  	_chromosome = ind._chromosome;
+	_chromosome = ind._chromosome;
 	compute_fitness();
 	return *this;
 }
 
 individual& individual::operator=(individual&& ind) {
 	_model = ind._model;
-  	_chromosome = std::move(ind._chromosome);
+	_chromosome = std::move(ind._chromosome);
 	compute_fitness();
 	return *this;
 }

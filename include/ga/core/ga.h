@@ -22,6 +22,7 @@ public:
 	individual(individual&&) = default;
 	individual& operator=(const individual&);
 	individual& operator=(individual&&);
+	
 	template <typename gene_t>
 	void add_gene(gene_t value) {
 		assert(_chromosome.size() + 1 <= _model.get_chromosome_length());
@@ -32,6 +33,7 @@ public:
 		auto gene = std::make_shared<gene_impl<gene_t>>(value);
 		_chromosome.push_back(gene);
 	}
+	
 	template <typename gene_t>
 	void set_gene(size_t id, gene_t value) {
 		assert(id < _chromosome.size());
@@ -41,21 +43,25 @@ public:
 		assert(it != alleles.end());
 		gene->set_value(value);
 	}
+	
 	template <typename gene_t>
 	gene_t get_gene(size_t id) {
 		assert(id < _chromosome.size());
 		auto gene = std::dynamic_pointer_cast<gene_impl<gene_t>>(_chromosome[id]);
 		assert(gene);
-      	return gene->get_value();
+		return gene->get_value();
 	}
+	
 	void compute_fitness();
 	double get_fitness() const;
 	friend std::ostream& operator<<(std::ostream&, const individual&);
+	
 private:
 	model<>& _model;
 	std::vector<std::shared_ptr<gene>> _chromosome;
 	double _fitness = -1;
 };
+
 
 struct population {
 public:
@@ -74,12 +80,14 @@ public:
 	double get_fitness() const;
 	size_t size() const;
 	friend std::ostream& operator<<(std::ostream&, const population&);
+	
 private:
 	model<>& _model;
 	uint32_t _generation;
 	std::vector<individual> _individuals;
 	double _fitness = -1;
 };
+
 
 struct algorithm {
 public:
@@ -89,9 +97,10 @@ public:
 	void crossover(population&);
 	void mutate(population&);
 	void evolve();
-  	static void compute_fitness(population&);
+	static void compute_fitness(population&);
 	static bool is_converged(population&);
 	static void print(population&);
+	
 private:
 	model<> _model;
 };
