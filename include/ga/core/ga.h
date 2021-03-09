@@ -8,6 +8,8 @@
 #include <random>
 #include <cassert>
 #include <cfloat>
+#include <map>
+#include <string>
 
 #include <ga/core/model.h>
 #include <ga/core/gene.h>
@@ -17,39 +19,36 @@ namespace ga {
 struct individual {
 public:
 	individual() = delete;
-	explicit individual(model<>&);
+	explicit individual(default_model&);
 	individual(const individual&) = default;
 	individual(individual&&) = default;
 	individual& operator=(const individual&);
 	individual& operator=(individual&&);
 	
 	template <typename gene_t>
-	void add_gene(gene_t value) {
-		assert(_chromosome.size() + 1 <= _model.get_chromosome_length());
-		auto gene_id = _chromosome.size();
-		const auto& alleles = _model.get_alleles<gene_t>(gene_id);
-		auto it = std::find(alleles.begin(), alleles.end(), value);
-		assert(it != alleles.end());
-		auto gene = std::make_shared<gene_impl<gene_t>>(value);
-		_chromosome.push_back(gene);
+	void set_gene(std::string name, gene_t value) {
+		auto gene_it = _chromosome.find(name);
+		if (gene_it == _chromosome.end()) {
+			auto gene_ptr = std::make_shared<gene_impl<gene_t>>();
+			auto result = _chromosome.emplace(name, gene_ptr);
+			assert(result.second);
+			gene_it = result.first;
+		}
+		const auto& alleles = _model.get_alleles_of_gene<gene_t>(name);
+		auto allele_it = std::find(alleles.begin(), alleles.end(), value);
+		assert(allele_it != alleles.end());
+		auto gene_ptr = std::dynamic_pointer_cast<gene_impl<gene_t>>(gene_it->second);
+		assert(gene_ptr);
+		gene_ptr->set(value);
 	}
 	
 	template <typename gene_t>
-	void set_gene(size_t id, gene_t value) {
-		assert(id < _chromosome.size());
-		auto gene = std::dynamic_pointer_cast<gene_impl<gene_t>>(_chromosome[id]);
-		const auto& alleles = _model.get_alleles<gene_t>(id);
-		auto it = std::find(alleles.begin(), alleles.end(), value);
-		assert(it != alleles.end());
-		gene->set_value(value);
-	}
-	
-	template <typename gene_t>
-	gene_t get_gene(size_t id) {
-		assert(id < _chromosome.size());
-		auto gene = std::dynamic_pointer_cast<gene_impl<gene_t>>(_chromosome[id]);
-		assert(gene);
-		return gene->get_value();
+	gene_t get_gene(std::string name) {
+		auto gene_it = _chromosome.find(name);
+		assert(gene_it != _chromosome.end());
+		auto gene_ptr = std::dynamic_pointer_cast<gene_impl<gene_t>>(gene_it->second);
+		assert(gene_ptr);
+		return gene_ptr->get();
 	}
 	
 	void compute_fitness();
@@ -57,8 +56,8 @@ public:
 	friend std::ostream& operator<<(std::ostream&, const individual&);
 	
 private:
-	model<>& _model;
-	std::vector<std::shared_ptr<gene>> _chromosome;
+	default_model& _model;
+	std::map<std::string, std::shared_ptr<gene>> _chromosome;
 	double _fitness = -1;
 };
 
@@ -66,7 +65,7 @@ private:
 struct population {
 public:
 	population() = delete;
-	explicit population(model<>&, uint32_t);
+	explicit population(default_model&, uint32_t);
 	population(const population&) = default;
 	population(population&&) = default;
 	population& operator=(const population&);
@@ -82,7 +81,7 @@ public:
 	friend std::ostream& operator<<(std::ostream&, const population&);
 	
 private:
-	model<>& _model;
+	default_model& _model;
 	uint32_t _generation;
 	std::vector<individual> _individuals;
 	double _fitness = -1;
@@ -91,7 +90,7 @@ private:
 
 struct algorithm {
 public:
-	model<>& get_model();
+	default_model& get_model();
 	void init(population&);
 	void select(population&);
 	void crossover(population&);
@@ -102,7 +101,7 @@ public:
 	static void print(population&);
 	
 private:
-	model<> _model;
+	default_model _model;
 };
 
 }

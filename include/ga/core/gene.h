@@ -23,7 +23,7 @@ public:
 	alleles_impl& operator=(alleles_impl&&) = default;
 	~alleles_impl() override = default;
 	
-	const std::vector<gene_t>& get_alleles() const {
+	const std::vector<gene_t>& get() const {
 		return _alleles;
 	}
 	
@@ -48,11 +48,11 @@ public:
 	gene_impl& operator=(gene_impl&&) = default;
 	~gene_impl() override = default;
 	
-	void set_value(gene_t value) {
+	void set(gene_t value) {
 		_value = value;
 	}
 	
-	gene_t get_value() const {
+	gene_t get() const {
 		return _value;
 	}
 	
@@ -62,7 +62,7 @@ private:
 
 template <typename gene_t>
 inline std::ostream& operator<<(std::ostream& os, gene_impl<gene_t> g) {
-	os << g.get_value();
+	os << g.get();
 	return os;
 }
 

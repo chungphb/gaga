@@ -2,7 +2,7 @@
 
 namespace ga {
 
-individual::individual(model<>& md) : _model{md} {}
+individual::individual(default_model& md) : _model{md} {}
 
 individual& individual::operator=(const individual& ind) {
 	_model = ind._model;
@@ -29,16 +29,16 @@ double individual::get_fitness() const {
 std::ostream& operator<<(std::ostream& os, const individual& ind) {
 	os << "Individual (";
 	const auto& chr = ind._chromosome;
-	size_t chr_l = chr.size();
-	for (size_t i = 0; i < chr_l; i++) {
-		auto gene = std::dynamic_pointer_cast<gene_impl<int>>(chr[i]); // FIXME
-		os << *gene << ((i == chr_l - 1) ? "" : ", ");
+	for (auto it = chr.begin(); it != chr.end();) {
+		auto gene = std::dynamic_pointer_cast<gene_impl<int>>(it->second);
+		it++;
+		os << *gene << (it == chr.end() ? "" : ", ");
 	}
 	os << "): " << ind._fitness;
 	return os;
 }
 
-population::population(model<>& md, uint32_t gen) : _model{md}, _generation{gen} {}
+population::population(default_model& md, uint32_t gen) : _model{md}, _generation{gen} {}
 
 population& population::operator=(const population& ppl) {
 	this->_model = ppl._model;
@@ -104,7 +104,7 @@ std::ostream& operator<<(std::ostream& os, const population& ppl) {
 	return os;
 }
 
-model<>& algorithm::get_model() {
+default_model& algorithm::get_model() {
 	return _model;
 }
 

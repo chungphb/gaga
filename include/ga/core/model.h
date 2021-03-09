@@ -5,6 +5,7 @@
 #include <memory>
 #include <functional>
 #include <cassert>
+#include <map>
 
 #include <ga/core/ga.h>
 #include <ga/core/policy.h>
@@ -29,7 +30,7 @@ public:
 	~problem_model() = default;
 	
 public:
-	std::vector<std::shared_ptr<alleles>> _genes;
+	std::map<std::string, std::shared_ptr<alleles>> _genes;
 };
 
 
@@ -91,21 +92,35 @@ public:
 	}
 	
 	template <typename gene_t>
-	void add_gene(const std::vector<gene_t>& values) {
-		auto gene = std::make_shared<alleles_impl<gene_t>>(std::move(values));
-		_pm._genes.push_back(std::move(gene));
+	void create_gene(std::string name, const std::vector<gene_t>& values) {
+		auto gene_it = _pm._genes.find(name);
+		assert(gene_it == _pm._genes.find(name));
+		auto alleles_ptr = std::make_shared<alleles_impl<gene_t>>(std::move(values));
+		assert(alleles_ptr);
+		auto result = _pm._genes.emplace(std::move(name), alleles_ptr);
+		assert(result.second);
 	}
 	
 	template <typename gene_t>
-	const std::vector<gene_t>& get_alleles(size_t id) const {
-		assert(id < _pm._genes.size());
-		auto gene = std::dynamic_pointer_cast<alleles_impl<gene_t>>(_pm._genes[id]);
-		assert(gene);
-		return gene->get_alleles();
+	const std::vector<gene_t>& get_alleles_of_gene(std::string name) const {
+		auto gene_it = _pm._genes.find(name);
+		assert(gene_it != _pm._genes.end());
+		auto alleles_ptr = std::dynamic_pointer_cast<alleles_impl<gene_t>>(gene_it->second);
+		assert(alleles_ptr);
+		return alleles_ptr->get();
+	}
+
+	std::vector<std::string> get_gene_list() {
+		std::vector<std::string> result;
+		const auto& gene_list = _pm._genes;
+		for (const auto& gene : gene_list) {
+			result.push_back(gene.first);
+		}
+		return result;
 	}
 	
-	void set_population_size(uint16_t ppl_s) {
-		_am._population_size = ppl_s;
+	void set_population_size(uint16_t ppl_size) {
+		_am._population_size = ppl_size;
 	}
 	
 	uint16_t get_population_size() const {
@@ -164,5 +179,7 @@ private:
 	problem_model_t _pm;
 	algorithm_model_t _am;
 };
+
+using default_model = model<>;
 
 }
