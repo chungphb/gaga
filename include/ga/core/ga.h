@@ -62,7 +62,6 @@ private:
 	double _fitness = -1;
 };
 
-
 struct population {
 public:
 	population() = delete;
@@ -87,7 +86,6 @@ private:
 	std::vector<individual> _individuals;
 	double _fitness = -1;
 };
-
 
 struct algorithm {
 public:
