@@ -3,7 +3,7 @@
 #include <iostream>
 #include <vector>
 
-#include "gene.h"
+#include <ga/core/gene.h>
 
 namespace ga {
 
