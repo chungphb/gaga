@@ -11,7 +11,6 @@ struct alleles {
 	virtual ~alleles() = default;
 };
 
-
 template <typename gene_t>
 struct alleles_impl : public alleles {
 public:
@@ -31,11 +30,9 @@ private:
 	std::vector<gene_t> _alleles;
 };
 
-
 struct gene {
 	virtual ~gene() = default;
 };
-
 
 template <typename gene_t>
 struct gene_impl : public gene {
@@ -59,7 +56,6 @@ public:
 private:
 	gene_t _value;
 };
-
 
 template <typename gene_t>
 inline std::ostream& operator<<(std::ostream& os, gene_impl<gene_t> g) {
