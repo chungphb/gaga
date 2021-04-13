@@ -1,4 +1,4 @@
-#include <ga/core/ga.h>
+#include "ga.h"
 
 size_t get_random(size_t min, size_t max) {
 	std::random_device rd;
