@@ -9,8 +9,8 @@
 #include <cassert>
 #include <cfloat>
 
-#include "model.h"
-#include "gene.h"
+#include <ga/core/model.h>
+#include <ga/core/gene.h>
 
 namespace ga {
 
